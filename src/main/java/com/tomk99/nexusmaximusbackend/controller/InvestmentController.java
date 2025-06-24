@@ -50,7 +50,6 @@ public class InvestmentController {
 
     @DeleteMapping("/worksheets/{id}")
     public ResponseEntity<Void> deleteWorksheet(@PathVariable Long id) {
-        // A CascadeType.ALL miatt a JPA automatikusan törli a kapcsolódó AssetType és InvestmentSnapshot entitásokat is.
         worksheetRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }
@@ -66,7 +65,6 @@ public class InvestmentController {
                 .orElseThrow(() -> new RuntimeException("Worksheet not found with id: " + worksheetId));
         assetType.setWorksheet(worksheet);
         assetTypeRepository.save(assetType);
-        // --- ITT A JAVÍTÁS: A teljes frissített listát adjuk vissza ---
         return assetTypeRepository.findByWorksheetId(worksheetId);
     }
 
@@ -75,12 +73,11 @@ public class InvestmentController {
         AssetType assetType = assetTypeRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("AssetType not found with id: " + id));
 
-        Worksheet worksheet = assetType.getWorksheet(); // Mentsük el a worksheet referenciát
+        Worksheet worksheet = assetType.getWorksheet();
 
         assetType.setName(assetTypeDetails.getName());
         assetType.setColor(assetTypeDetails.getColor());
         assetTypeRepository.save(assetType);
-        // --- ITT A JAVÍTÁS: A teljes frissített listát adjuk vissza ---
         return assetTypeRepository.findByWorksheetId(worksheet.getId());
     }
 
@@ -109,11 +106,12 @@ public class InvestmentController {
     }
 
     @PostMapping("/worksheets/{worksheetId}/snapshots")
-    public InvestmentSnapshot createSnapshot(@PathVariable Long worksheetId, @RequestBody InvestmentSnapshot snapshot) {
+    public List<InvestmentSnapshot> createSnapshot(@PathVariable Long worksheetId, @RequestBody InvestmentSnapshot snapshot) {
         Worksheet worksheet = worksheetRepository.findById(worksheetId)
                 .orElseThrow(() -> new RuntimeException("Worksheet not found with id: " + worksheetId));
         snapshot.setWorksheet(worksheet);
-        return investmentSnapshotRepository.save(snapshot);
+        investmentSnapshotRepository.save(snapshot);
+        return investmentSnapshotRepository.findByWorksheetId(worksheetId);
     }
 
     @PutMapping("/snapshots/{id}")
