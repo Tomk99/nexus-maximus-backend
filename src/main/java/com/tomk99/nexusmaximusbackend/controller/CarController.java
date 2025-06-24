@@ -21,19 +21,19 @@ public class CarController {
     @Autowired
     private MaintenanceRepository maintenanceRepository;
 
-
     @GetMapping("/refuelings")
     public List<Refueling> getAllRefuelings() {
         return refuelingRepository.findAll();
     }
 
     @PostMapping("/refuelings")
-    public Refueling createRefueling(@RequestBody Refueling refueling) {
-        return refuelingRepository.save(refueling);
+    public List<Refueling> createRefueling(@RequestBody Refueling refueling) {
+        refuelingRepository.save(refueling);
+        return refuelingRepository.findAll();
     }
 
     @PutMapping("/refuelings/{id}")
-    public ResponseEntity<Refueling> updateRefueling(@PathVariable Long id, @RequestBody Refueling refuelingDetails) {
+    public List<Refueling> updateRefueling(@PathVariable Long id, @RequestBody Refueling refuelingDetails) {
         Refueling refueling = refuelingRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Refueling not found with id: " + id));
 
@@ -41,16 +41,13 @@ public class CarController {
         refueling.setOdometer(refuelingDetails.getOdometer());
         refueling.setLiters(refuelingDetails.getLiters());
 
-        final Refueling updatedRefueling = refuelingRepository.save(refueling);
-        return ResponseEntity.ok(updatedRefueling);
+        refuelingRepository.save(refueling);
+        return refuelingRepository.findAll();
     }
 
     @DeleteMapping("/refuelings/{id}")
     public ResponseEntity<Void> deleteRefueling(@PathVariable Long id) {
-        Refueling refueling = refuelingRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Refueling not found with id: " + id));
-
-        refuelingRepository.delete(refueling);
+        refuelingRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }
 
@@ -60,12 +57,13 @@ public class CarController {
     }
 
     @PostMapping("/maintenances")
-    public Maintenance createMaintenance(@RequestBody Maintenance maintenance) {
-        return maintenanceRepository.save(maintenance);
+    public List<Maintenance> createMaintenance(@RequestBody Maintenance maintenance) {
+        maintenanceRepository.save(maintenance);
+        return maintenanceRepository.findAll();
     }
 
     @PutMapping("/maintenances/{id}")
-    public ResponseEntity<Maintenance> updateMaintenance(@PathVariable Long id, @RequestBody Maintenance maintenanceDetails) {
+    public List<Maintenance> updateMaintenance(@PathVariable Long id, @RequestBody Maintenance maintenanceDetails) {
         Maintenance maintenance = maintenanceRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Maintenance not found with id: " + id));
 
@@ -73,16 +71,13 @@ public class CarController {
         maintenance.setOdometer(maintenanceDetails.getOdometer());
         maintenance.setDescription(maintenanceDetails.getDescription());
 
-        final Maintenance updatedMaintenance = maintenanceRepository.save(maintenance);
-        return ResponseEntity.ok(updatedMaintenance);
+        maintenanceRepository.save(maintenance);
+        return maintenanceRepository.findAll();
     }
 
     @DeleteMapping("/maintenances/{id}")
     public ResponseEntity<Void> deleteMaintenance(@PathVariable Long id) {
-        Maintenance maintenance = maintenanceRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Maintenance not found with id: " + id));
-
-        maintenanceRepository.delete(maintenance);
+        maintenanceRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }
 }
