@@ -61,20 +61,27 @@ public class InvestmentController {
     }
 
     @PostMapping("/worksheets/{worksheetId}/asset-types")
-    public AssetType createAssetType(@PathVariable Long worksheetId, @RequestBody AssetType assetType) {
+    public List<AssetType> createAssetType(@PathVariable Long worksheetId, @RequestBody AssetType assetType) {
         Worksheet worksheet = worksheetRepository.findById(worksheetId)
                 .orElseThrow(() -> new RuntimeException("Worksheet not found with id: " + worksheetId));
         assetType.setWorksheet(worksheet);
-        return assetTypeRepository.save(assetType);
+        assetTypeRepository.save(assetType);
+        // --- ITT A JAVÍTÁS: A teljes frissített listát adjuk vissza ---
+        return assetTypeRepository.findByWorksheetId(worksheetId);
     }
 
     @PutMapping("/asset-types/{id}")
-    public ResponseEntity<AssetType> updateAssetType(@PathVariable Long id, @RequestBody AssetType assetTypeDetails) {
+    public List<AssetType> updateAssetType(@PathVariable Long id, @RequestBody AssetType assetTypeDetails) {
         AssetType assetType = assetTypeRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("AssetType not found with id: " + id));
+
+        Worksheet worksheet = assetType.getWorksheet(); // Mentsük el a worksheet referenciát
+
         assetType.setName(assetTypeDetails.getName());
         assetType.setColor(assetTypeDetails.getColor());
-        return ResponseEntity.ok(assetTypeRepository.save(assetType));
+        assetTypeRepository.save(assetType);
+        // --- ITT A JAVÍTÁS: A teljes frissített listát adjuk vissza ---
+        return assetTypeRepository.findByWorksheetId(worksheet.getId());
     }
 
     @DeleteMapping("/asset-types/{id}")
