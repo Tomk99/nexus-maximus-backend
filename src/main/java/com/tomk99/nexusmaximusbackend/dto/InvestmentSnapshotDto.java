@@ -6,5 +6,5 @@ import java.util.List;
 public record InvestmentSnapshotDto(
         Long id,
         LocalDate date,
-        List<AssetValue> assets
+        List<AssetValueDto> assets
 ) {}

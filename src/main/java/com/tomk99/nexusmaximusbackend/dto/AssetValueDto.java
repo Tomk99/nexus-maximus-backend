@@ -1,6 +1,6 @@
 package com.tomk99.nexusmaximusbackend.dto;
 
-public record AssetValue(
+public record AssetValueDto(
         Long assetTypeId,
         String name,
         String color,
