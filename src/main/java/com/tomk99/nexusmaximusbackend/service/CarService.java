@@ -1,6 +1,5 @@
 package com.tomk99.nexusmaximusbackend.service;
 
-import com.tomk99.nexusmaximusbackend.dto.CreateRefuelingRequestDto;
 import com.tomk99.nexusmaximusbackend.dto.MaintenanceDto;
 import com.tomk99.nexusmaximusbackend.dto.RefuelingDto;
 import com.tomk99.nexusmaximusbackend.model.Maintenance;
@@ -10,6 +9,7 @@ import com.tomk99.nexusmaximusbackend.repositories.RefuelingRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.PrintWriter;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -32,11 +32,11 @@ public class CarService {
     }
 
     @Transactional
-    public RefuelingDto createRefueling(CreateRefuelingRequestDto requestDto) {
+    public RefuelingDto createRefueling(RefuelingDto refuelingDto) {
         Refueling refueling = new Refueling();
-        refueling.setDate(requestDto.date());
-        refueling.setOdometer(requestDto.odometer());
-        refueling.setLiters(requestDto.liters());
+        refueling.setDate(refuelingDto.date());
+        refueling.setOdometer(refuelingDto.odometer());
+        refueling.setLiters(refuelingDto.liters());
         Refueling saved = refuelingRepository.save(refueling);
         return toDto(saved);
     }
@@ -88,6 +88,39 @@ public class CarService {
     @Transactional
     public void deleteMaintenance(Long id) {
         maintenanceRepository.deleteById(id);
+    }
+
+    public void exportCarDataToCsv(PrintWriter writer) {
+        List<RefuelingDto> refuelings = getAllRefuelings();
+        List<MaintenanceDto> maintenances = getAllMaintenances();
+
+        try {
+            writer.println("Type,ID,Date,Odometer,Value_Or_Description");
+
+            for (RefuelingDto refueling : refuelings) {
+                writer.println(String.join(",",
+                        "REFUELING",
+                        refueling.id().toString(),
+                        refueling.date().toString(),
+                        String.valueOf(refueling.odometer()),
+                        String.valueOf(refueling.liters())
+                ));
+            }
+
+            for (MaintenanceDto maintenance : maintenances) {
+                String description = "\"" + maintenance.description().replace("\"", "\"\"") + "\"";
+                writer.println(String.join(",",
+                        "MAINTENANCE",
+                        maintenance.id().toString(),
+                        maintenance.date().toString(),
+                        maintenance.odometer() != null ? maintenance.odometer().toString() : "",
+                        description
+                ));
+            }
+        } finally {
+            writer.flush();
+            writer.close();
+        }
     }
 
     private RefuelingDto toDto(Refueling refueling) {
