@@ -1,134 +1,97 @@
 package com.tomk99.nexusmaximusbackend.controller;
 
-import com.tomk99.nexusmaximusbackend.model.investment.AssetType;
-import com.tomk99.nexusmaximusbackend.model.investment.AssetValue;
-import com.tomk99.nexusmaximusbackend.model.investment.InvestmentSnapshot;
-import com.tomk99.nexusmaximusbackend.model.investment.Worksheet;
-import com.tomk99.nexusmaximusbackend.repositories.AssetTypeRepository;
-import com.tomk99.nexusmaximusbackend.repositories.InvestmentSnapshotRepository;
-import com.tomk99.nexusmaximusbackend.repositories.WorksheetRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.tomk99.nexusmaximusbackend.dto.AssetTypeDto;
+import com.tomk99.nexusmaximusbackend.dto.InvestmentSnapshotDto;
+import com.tomk99.nexusmaximusbackend.dto.WorksheetDto;
+import com.tomk99.nexusmaximusbackend.service.AssetTypeService;
+import com.tomk99.nexusmaximusbackend.service.InvestmentService;
+import com.tomk99.nexusmaximusbackend.service.WorksheetService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api")
 @CrossOrigin(origins = "${app.cors.allowed-origins}")
 public class InvestmentController {
 
-    @Autowired
-    private WorksheetRepository worksheetRepository;
+    private final InvestmentService investmentService;
+    private final WorksheetService worksheetService;
+    private final AssetTypeService assetTypeService;
 
-    @Autowired
-    private AssetTypeRepository assetTypeRepository;
-
-    @Autowired
-    private InvestmentSnapshotRepository investmentSnapshotRepository;
-
+    public InvestmentController(InvestmentService investmentService,
+                                WorksheetService worksheetService,
+                                AssetTypeService assetTypeService) {
+        this.investmentService = investmentService;
+        this.worksheetService = worksheetService;
+        this.assetTypeService = assetTypeService;
+    }
 
     @GetMapping("/worksheets")
-    public List<Worksheet> getAllWorksheets() {
-        return worksheetRepository.findAll();
+    public List<WorksheetDto> getAllWorksheets() {
+        return worksheetService.getAllWorksheets();
     }
 
     @PostMapping("/worksheets")
-    public Worksheet createWorksheet(@RequestBody Worksheet worksheet) {
-        return worksheetRepository.save(worksheet);
+    @ResponseStatus(HttpStatus.CREATED)
+    public WorksheetDto createWorksheet(@RequestBody WorksheetDto worksheetDto) {
+        return worksheetService.createWorksheet(worksheetDto);
     }
 
     @PutMapping("/worksheets/{id}")
-    public ResponseEntity<Worksheet> updateWorksheet(@PathVariable Long id, @RequestBody Worksheet worksheetDetails) {
-        Worksheet worksheet = worksheetRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Worksheet not found with id: " + id));
-        worksheet.setName(worksheetDetails.getName());
-        return ResponseEntity.ok(worksheetRepository.save(worksheet));
+    public WorksheetDto updateWorksheet(@PathVariable Long id, @RequestBody WorksheetDto worksheetDetails) {
+        return worksheetService.updateWorksheet(id, worksheetDetails);
     }
 
     @DeleteMapping("/worksheets/{id}")
     public ResponseEntity<Void> deleteWorksheet(@PathVariable Long id) {
-        worksheetRepository.deleteById(id);
+        worksheetService.deleteWorksheet(id);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/worksheets/{worksheetId}/asset-types")
-    public List<AssetType> getAssetTypesForWorksheet(@PathVariable Long worksheetId) {
-        return assetTypeRepository.findByWorksheetId(worksheetId);
+    public List<AssetTypeDto> getAssetTypesForWorksheet(@PathVariable Long worksheetId) {
+        return assetTypeService.getAssetTypesForWorksheet(worksheetId);
     }
 
     @PostMapping("/worksheets/{worksheetId}/asset-types")
-    public List<AssetType> createAssetType(@PathVariable Long worksheetId, @RequestBody AssetType assetType) {
-        Worksheet worksheet = worksheetRepository.findById(worksheetId)
-                .orElseThrow(() -> new RuntimeException("Worksheet not found with id: " + worksheetId));
-        assetType.setWorksheet(worksheet);
-        assetTypeRepository.save(assetType);
-        return assetTypeRepository.findByWorksheetId(worksheetId);
+    @ResponseStatus(HttpStatus.CREATED)
+    public AssetTypeDto createAssetType(@PathVariable Long worksheetId, @RequestBody AssetTypeDto assetTypeDto) {
+        return assetTypeService.createAssetType(worksheetId, assetTypeDto);
     }
 
     @PutMapping("/asset-types/{id}")
-    public List<AssetType> updateAssetType(@PathVariable Long id, @RequestBody AssetType assetTypeDetails) {
-        AssetType assetType = assetTypeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("AssetType not found with id: " + id));
-
-        Worksheet worksheet = assetType.getWorksheet();
-
-        assetType.setName(assetTypeDetails.getName());
-        assetType.setColor(assetTypeDetails.getColor());
-        assetTypeRepository.save(assetType);
-        return assetTypeRepository.findByWorksheetId(worksheet.getId());
+    public AssetTypeDto updateAssetType(@PathVariable Long id, @RequestBody AssetTypeDto assetTypeDetails) {
+        return assetTypeService.updateAssetType(id, assetTypeDetails);
     }
 
     @DeleteMapping("/asset-types/{id}")
-    @Transactional
     public ResponseEntity<Void> deleteAssetType(@PathVariable Long id) {
-        AssetType assetType = assetTypeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("AssetType not found with id: " + id));
-
-        List<InvestmentSnapshot> snapshots = investmentSnapshotRepository.findByWorksheetId(assetType.getWorksheet().getId());
-        for (InvestmentSnapshot snapshot : snapshots) {
-            List<AssetValue> updatedAssets = snapshot.getAssets().stream()
-                    .filter(assetValue -> !assetValue.getAssetTypeId().equals(id))
-                    .collect(Collectors.toList());
-            snapshot.setAssets(updatedAssets);
-            investmentSnapshotRepository.save(snapshot);
-        }
-
-        assetTypeRepository.delete(assetType);
+        investmentService.deleteAssetTypeAndCleanSnapshots(id);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/worksheets/{worksheetId}/snapshots")
-    public List<InvestmentSnapshot> getSnapshotsForWorksheet(@PathVariable Long worksheetId) {
-        return investmentSnapshotRepository.findByWorksheetId(worksheetId);
+    public List<InvestmentSnapshotDto> getSnapshotsForWorksheet(@PathVariable Long worksheetId) {
+        return investmentService.getSnapshotsForWorksheet(worksheetId);
     }
 
     @PostMapping("/worksheets/{worksheetId}/snapshots")
-    public List<InvestmentSnapshot> createSnapshot(@PathVariable Long worksheetId, @RequestBody InvestmentSnapshot snapshot) {
-        Worksheet worksheet = worksheetRepository.findById(worksheetId)
-                .orElseThrow(() -> new RuntimeException("Worksheet not found with id: " + worksheetId));
-        snapshot.setWorksheet(worksheet);
-        investmentSnapshotRepository.save(snapshot);
-        return investmentSnapshotRepository.findByWorksheetId(worksheetId);
+    @ResponseStatus(HttpStatus.CREATED)
+    public InvestmentSnapshotDto createSnapshot(@PathVariable Long worksheetId, @RequestBody InvestmentSnapshotDto snapshotDto) {
+        return investmentService.createSnapshot(worksheetId, snapshotDto);
     }
 
     @PutMapping("/snapshots/{id}")
-    public ResponseEntity<InvestmentSnapshot> updateSnapshot(@PathVariable Long id, @RequestBody InvestmentSnapshot snapshotDetails) {
-        InvestmentSnapshot snapshot = investmentSnapshotRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("InvestmentSnapshot not found with id: " + id));
-
-        snapshot.setDate(snapshotDetails.getDate());
-        snapshot.setAssets(snapshotDetails.getAssets());
-
-        final InvestmentSnapshot updatedSnapshot = investmentSnapshotRepository.save(snapshot);
-        return ResponseEntity.ok(updatedSnapshot);
+    public InvestmentSnapshotDto updateSnapshot(@PathVariable Long id, @RequestBody InvestmentSnapshotDto snapshotDetails) {
+        return investmentService.updateSnapshot(id, snapshotDetails);
     }
 
     @DeleteMapping("/snapshots/{id}")
     public ResponseEntity<Void> deleteSnapshot(@PathVariable Long id) {
-        investmentSnapshotRepository.deleteById(id);
+        investmentService.deleteSnapshot(id);
         return ResponseEntity.noContent().build();
     }
 }

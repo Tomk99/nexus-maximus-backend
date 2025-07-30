@@ -1,10 +1,10 @@
 package com.tomk99.nexusmaximusbackend.controller;
 
-import com.tomk99.nexusmaximusbackend.model.Maintenance;
-import com.tomk99.nexusmaximusbackend.model.Refueling;
-import com.tomk99.nexusmaximusbackend.repositories.MaintenanceRepository;
-import com.tomk99.nexusmaximusbackend.repositories.RefuelingRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.tomk99.nexusmaximusbackend.dto.CreateRefuelingRequestDto;
+import com.tomk99.nexusmaximusbackend.dto.MaintenanceDto;
+import com.tomk99.nexusmaximusbackend.dto.RefuelingDto;
+import com.tomk99.nexusmaximusbackend.service.CarService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,69 +15,53 @@ import java.util.List;
 @CrossOrigin(origins = "${app.cors.allowed-origins}")
 public class CarController {
 
-    @Autowired
-    private RefuelingRepository refuelingRepository;
+    private final CarService carService;
 
-    @Autowired
-    private MaintenanceRepository maintenanceRepository;
+    public CarController(CarService carService) {
+        this.carService = carService;
+    }
 
     @GetMapping("/refuelings")
-    public List<Refueling> getAllRefuelings() {
-        return refuelingRepository.findAll();
+    public List<RefuelingDto> getAllRefuelings() {
+        return carService.getAllRefuelings();
     }
 
     @PostMapping("/refuelings")
-    public List<Refueling> createRefueling(@RequestBody Refueling refueling) {
-        refuelingRepository.save(refueling);
-        return refuelingRepository.findAll();
+    @ResponseStatus(HttpStatus.CREATED)
+    public RefuelingDto createRefueling(@RequestBody CreateRefuelingRequestDto requestDto) {
+        return carService.createRefueling(requestDto);
     }
 
     @PutMapping("/refuelings/{id}")
-    public List<Refueling> updateRefueling(@PathVariable Long id, @RequestBody Refueling refuelingDetails) {
-        Refueling refueling = refuelingRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Refueling not found with id: " + id));
-
-        refueling.setDate(refuelingDetails.getDate());
-        refueling.setOdometer(refuelingDetails.getOdometer());
-        refueling.setLiters(refuelingDetails.getLiters());
-
-        refuelingRepository.save(refueling);
-        return refuelingRepository.findAll();
+    public RefuelingDto updateRefueling(@PathVariable Long id, @RequestBody RefuelingDto refuelingDetails) {
+        return carService.updateRefueling(id, refuelingDetails);
     }
 
     @DeleteMapping("/refuelings/{id}")
     public ResponseEntity<Void> deleteRefueling(@PathVariable Long id) {
-        refuelingRepository.deleteById(id);
+        carService.deleteRefueling(id);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/maintenances")
-    public List<Maintenance> getAllMaintenances() {
-        return maintenanceRepository.findAll();
+    public List<MaintenanceDto> getAllMaintenances() {
+        return carService.getAllMaintenances();
     }
 
     @PostMapping("/maintenances")
-    public List<Maintenance> createMaintenance(@RequestBody Maintenance maintenance) {
-        maintenanceRepository.save(maintenance);
-        return maintenanceRepository.findAll();
+    @ResponseStatus(HttpStatus.CREATED)
+    public MaintenanceDto createMaintenance(@RequestBody MaintenanceDto maintenanceDto) {
+        return carService.createMaintenance(maintenanceDto);
     }
 
     @PutMapping("/maintenances/{id}")
-    public List<Maintenance> updateMaintenance(@PathVariable Long id, @RequestBody Maintenance maintenanceDetails) {
-        Maintenance maintenance = maintenanceRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Maintenance not found with id: " + id));
-
-        maintenance.setDate(maintenanceDetails.getDate());
-        maintenance.setOdometer(maintenanceDetails.getOdometer());
-        maintenance.setDescription(maintenanceDetails.getDescription());
-
-        maintenanceRepository.save(maintenance);
-        return maintenanceRepository.findAll();
+    public MaintenanceDto updateMaintenance(@PathVariable Long id, @RequestBody MaintenanceDto maintenanceDetails) {
+        return carService.updateMaintenance(id, maintenanceDetails);
     }
 
     @DeleteMapping("/maintenances/{id}")
     public ResponseEntity<Void> deleteMaintenance(@PathVariable Long id) {
-        maintenanceRepository.deleteById(id);
+        carService.deleteMaintenance(id);
         return ResponseEntity.noContent().build();
     }
 }
