@@ -1,17 +1,18 @@
 package com.tomk99.nexusmaximusbackend.service;
 
-import com.tomk99.nexusmaximusbackend.dto.BoxDetailDto;
-import com.tomk99.nexusmaximusbackend.dto.BoxDto;
-import com.tomk99.nexusmaximusbackend.dto.ItemDto;
-import com.tomk99.nexusmaximusbackend.model.inventory.Box;
-import com.tomk99.nexusmaximusbackend.model.inventory.Item;
-import com.tomk99.nexusmaximusbackend.repositories.BoxRepository;
-import com.tomk99.nexusmaximusbackend.repositories.ItemRepository;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.WriterException;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
+import com.tomk99.nexusmaximusbackend.dto.BoxDetailDto;
+import com.tomk99.nexusmaximusbackend.dto.BoxDto;
+import com.tomk99.nexusmaximusbackend.dto.BoxSearchResultDto;
+import com.tomk99.nexusmaximusbackend.dto.ItemDto;
+import com.tomk99.nexusmaximusbackend.model.inventory.Box;
+import com.tomk99.nexusmaximusbackend.model.inventory.Item;
+import com.tomk99.nexusmaximusbackend.repositories.BoxRepository;
+import com.tomk99.nexusmaximusbackend.repositories.ItemRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,13 +28,13 @@ public class InventoryService {
     private final BoxRepository boxRepository;
     private final ItemRepository itemRepository;
 
+    @Value("${app.frontend.url}")
+    private String frontendUrl;
+
     public InventoryService(BoxRepository boxRepository, ItemRepository itemRepository) {
         this.boxRepository = boxRepository;
         this.itemRepository = itemRepository;
     }
-
-    @Value("${app.frontend.url}")
-    private String frontendUrl;
 
     @Transactional(readOnly = true)
     public List<BoxDto> getAllBoxes() {
@@ -73,7 +74,33 @@ public class InventoryService {
         boxRepository.deleteById(boxId);
     }
 
-    // --- Item Metódusok ---
+    @Transactional(readOnly = true)
+    public List<BoxSearchResultDto> searchBoxesByItemName(String itemName) {
+        if (itemName == null || itemName.isBlank()) {
+            return getAllBoxes().stream()
+                    .map(boxDto -> new BoxSearchResultDto(boxDto.id(), boxDto.name(), boxDto.description(), List.of()))
+                    .collect(Collectors.toList());
+        }
+
+        List<Box> foundBoxes = boxRepository.findDistinctByItems_NameContainingIgnoreCase(itemName);
+        String lowerCaseItemName = itemName.toLowerCase();
+
+        return foundBoxes.stream()
+                .map(box -> {
+                    List<String> matchingItemNames = box.getItems().stream()
+                            .filter(item -> item.getName().toLowerCase().contains(lowerCaseItemName))
+                            .map(Item::getName)
+                            .collect(Collectors.toList());
+
+                    return new BoxSearchResultDto(
+                            box.getId(),
+                            box.getName(),
+                            box.getDescription(),
+                            matchingItemNames
+                    );
+                })
+                .collect(Collectors.toList());
+    }
 
     @Transactional
     public ItemDto addItemToBox(Long boxId, ItemDto itemDto) {
@@ -111,7 +138,6 @@ public class InventoryService {
         BitMatrix bitMatrix = qrCodeWriter.encode(urlToEncode, BarcodeFormat.QR_CODE, 250, 250);
         ByteArrayOutputStream pngOutputStream = new ByteArrayOutputStream();
         MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream);
-
         return pngOutputStream.toByteArray();
     }
 

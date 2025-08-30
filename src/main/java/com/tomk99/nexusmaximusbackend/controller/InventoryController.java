@@ -3,6 +3,7 @@ package com.tomk99.nexusmaximusbackend.controller;
 import com.google.zxing.WriterException;
 import com.tomk99.nexusmaximusbackend.dto.BoxDetailDto;
 import com.tomk99.nexusmaximusbackend.dto.BoxDto;
+import com.tomk99.nexusmaximusbackend.dto.BoxSearchResultDto;
 import com.tomk99.nexusmaximusbackend.dto.ItemDto;
 import com.tomk99.nexusmaximusbackend.service.InventoryService;
 import org.springframework.http.HttpStatus;
@@ -27,6 +28,11 @@ public class InventoryController {
     @GetMapping("/boxes")
     public List<BoxDto> getAllBoxes() {
         return inventoryService.getAllBoxes();
+    }
+
+    @GetMapping("/boxes/search")
+    public List<BoxSearchResultDto> searchBoxes(@RequestParam(required = false, defaultValue = "") String itemName) {
+        return inventoryService.searchBoxesByItemName(itemName);
     }
 
     @GetMapping("/boxes/{id}")
